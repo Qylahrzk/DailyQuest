@@ -1,20 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+
 import 'models/mood_entry.dart';
-import 'package:dailyquest/screens/splash_screen.dart';
+import 'firebase_options.dart';
+import 'screens/splash_screen.dart';
+import 'app_navigation_layout.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Hive
-  await Hive.initFlutter();
+  // ✅ Initialize Firebase
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 
-  // Register your adapter
+  // ✅ Initialize Hive
+  await Hive.initFlutter();
   Hive.registerAdapter(MoodEntryAdapter());
 
-  // Open boxes
+  // ✅ Open Hive boxes
   await Hive.openBox<MoodEntry>('moods');
-  await Hive.openBox('userData'); // for XP, streak, etc.
+  await Hive.openBox('userData'); // For XP, streak, etc.
 
   runApp(const DailyQuestApp());
 }
@@ -37,7 +45,10 @@ class DailyQuestApp extends StatelessWidget {
           ),
         ),
       ),
-      home: const SplashScreen(),
+      // ✅ Show splash if not logged in, else show bottom navigation layout
+      home: FirebaseAuth.instance.currentUser == null
+          ? const SplashScreen()
+          : const AppNavigationLayout(), // 👈 This is your new dashboard layout
     );
   }
 }
