@@ -1,6 +1,7 @@
+import 'package:dailyquest/auth_service.dart';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../home/home_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // ✅ make sure this path is correct
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -15,23 +16,36 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _formKey = GlobalKey<FormState>();
   bool isLoading = false;
 
+  final auth = AuthService(); // ✅ Firebase Auth service
+
   void signUp() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('user_email', emailController.text.trim());
-    await prefs.setString('user_password', passwordController.text.trim());
+    setState(() => isLoading = true);
 
-    // ignore: use_build_context_synchronously
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Account created successfully!")),
-    );
+    try {
+      await auth.createAccount(
+        email: emailController.text.trim(),
+        password: passwordController.text.trim(),
+      );
 
-    Navigator.pushReplacement(
-      // ignore: use_build_context_synchronously
-      context,
-      MaterialPageRoute(builder: (_) => const HomeScreen()),
-    );
+      // Success
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Account created successfully!")),
+      );
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
+      );
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message ?? "Registration failed")),
+      );
+    } finally {
+      setState(() => isLoading = false);
+    }
   }
 
   @override
@@ -81,7 +95,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 ),
                 const SizedBox(height: 24),
                 ElevatedButton(
-                  onPressed: signUp,
+                  onPressed: isLoading ? null : signUp,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.brown,
                     padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
@@ -91,7 +105,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       ? const CircularProgressIndicator(color: Colors.white)
                       : const Text(
                           'SIGN UP',
-                          style: TextStyle(color: Colors.white), // ✅ fixed
+                          style: TextStyle(color: Colors.white),
                         ),
                 ),
                 const SizedBox(height: 16),
@@ -99,7 +113,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   onPressed: () => Navigator.pop(context),
                   child: const Text(
                     "Already have an account? Log In",
-                    style: TextStyle(color: Colors.brown), // ✅ fixed
+                    style: TextStyle(color: Colors.brown),
                   ),
                 ),
               ],

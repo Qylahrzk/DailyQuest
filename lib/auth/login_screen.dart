@@ -1,9 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'signup_screen.dart';
 import '../home/home_screen.dart';
+import 'package:dailyquest/auth_service.dart'; // ✅ Add this if using AuthService
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -18,6 +19,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool isLoading = false;
 
   final GoogleSignIn _googleSignIn = GoogleSignIn(scopes: ['email']);
+  final auth = AuthService(); // ✅ Firebase Auth
 
   void loginWithEmail() async {
     if (emailController.text.isEmpty || passwordController.text.isEmpty) {
@@ -27,22 +29,26 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    final prefs = await SharedPreferences.getInstance();
-    final storedEmail = prefs.getString('user_email');
-    final storedPassword = prefs.getString('user_password');
+    setState(() => isLoading = true);
 
-    if (emailController.text == storedEmail &&
-        passwordController.text == storedPassword) {
+    try {
+      await auth.signIn(
+        email: emailController.text.trim(),
+        password: passwordController.text.trim(),
+      );
+
+      if (!mounted) return;
       Navigator.pushReplacement(
-        // ignore: use_build_context_synchronously
         context,
         MaterialPageRoute(builder: (_) => const HomeScreen()),
       );
-    } else {
-      // ignore: use_build_context_synchronously
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Invalid credentials.")),
+        SnackBar(content: Text(e.message ?? "Login failed")),
       );
+    } finally {
+      setState(() => isLoading = false);
     }
   }
 
@@ -50,11 +56,7 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       final account = await _googleSignIn.signIn();
       if (account != null) {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('google_name', account.displayName ?? '');
-        await prefs.setString('google_email', account.email);
-        await prefs.setString('google_photo', account.photoUrl ?? '');
-
+        // Optionally link to Firebase here (advanced)
         Navigator.pushReplacement(
           // ignore: use_build_context_synchronously
           context,
@@ -63,6 +65,10 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       if (kDebugMode) print(e);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Google login failed")),
+      );
     }
   }
 
@@ -107,23 +113,25 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 24),
               ElevatedButton(
-                onPressed: loginWithEmail,
+                onPressed: isLoading ? null : loginWithEmail,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.brown,
                   padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 ),
-                child: const Text(
-                  'LOGIN WITH EMAIL',
-                  style: TextStyle(color: Colors.white), // ✅ fixed
-                ),
+                child: isLoading
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text(
+                        'LOGIN WITH EMAIL',
+                        style: TextStyle(color: Colors.white),
+                      ),
               ),
               const SizedBox(height: 16),
               ElevatedButton.icon(
                 onPressed: loginWithGoogle,
                 icon: const Icon(Icons.login, color: Colors.white),
                 label: const Text("Sign in with Google",
-                    style: TextStyle(color: Colors.white)), // ✅ fixed
+                    style: TextStyle(color: Colors.white)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.redAccent,
                   padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
@@ -138,7 +146,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 child: const Text(
                   "Don’t have an account? Sign Up",
-                  style: TextStyle(color: Colors.brown), // ✅ fixed
+                  style: TextStyle(color: Colors.brown),
                 ),
               ),
             ],
