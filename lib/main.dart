@@ -1,32 +1,37 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
-import 'models/mood_entry.dart';
 import 'firebase_options.dart';
+import 'models/mood_entry.dart';
+import 'auth_layout.dart';
 import 'screens/splash_screen.dart';
-import 'app_navigation_layout.dart';
 
+/// ✅ Entry point for DailyQuest app
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // ✅ Initialize Firebase
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  try {
+    // ✅ Initialize Firebase
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
 
-  // ✅ Initialize Hive
-  await Hive.initFlutter();
-  Hive.registerAdapter(MoodEntryAdapter());
+    // ✅ Initialize Hive for local storage
+    await Hive.initFlutter();
+    Hive.registerAdapter(MoodEntryAdapter());
 
-  // ✅ Open Hive boxes
-  await Hive.openBox<MoodEntry>('moods');
-  await Hive.openBox('userData'); // For XP, streak, etc.
+    await Hive.openBox<MoodEntry>('moods');
+    await Hive.openBox('userData');
+  } catch (e) {
+    // Optionally handle errors if Hive/Firebase fail to initialize
+    debugPrint('Initialization error: $e');
+  }
 
   runApp(const DailyQuestApp());
 }
 
+/// ✅ The main app widget
 class DailyQuestApp extends StatelessWidget {
   const DailyQuestApp({super.key});
 
@@ -41,14 +46,17 @@ class DailyQuestApp extends StatelessWidget {
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.brown,
+            foregroundColor: Colors.white,
             textStyle: const TextStyle(fontSize: 16),
           ),
         ),
+        colorScheme: ColorScheme.fromSwatch(primarySwatch: Colors.brown).copyWith(
+          secondary: Colors.brown.shade300,
+        ),
       ),
-      // ✅ Show splash if not logged in, else show bottom navigation layout
-      home: FirebaseAuth.instance.currentUser == null
-          ? const SplashScreen()
-          : const AppNavigationLayout(), // 👈 This is your new dashboard layout
+      home: const AuthLayout(
+        pageIfNotConnected: SplashScreen(),
+      ),
     );
   }
 }
