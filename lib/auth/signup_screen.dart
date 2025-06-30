@@ -1,7 +1,8 @@
-import 'package:dailyquest/auth_service.dart';
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import '../home/home_screen.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // ✅ make sure this path is correct
+import '../auth_service.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -16,35 +17,68 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _formKey = GlobalKey<FormState>();
   bool isLoading = false;
 
-  final auth = AuthService(); // ✅ Firebase Auth service
+  final auth = AuthService();
+  final GoogleSignIn _googleSignIn = GoogleSignIn(scopes: ['email']);
 
+  /// ✨ Email/password signup via Firebase
   void signUp() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => isLoading = true);
 
     try {
-      await auth.createAccount(
+      final cred = await auth.createAccount(
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
       );
 
-      // Success
+      final box = Hive.box('userData');
+      await box.put('email', cred.user?.email ?? '');
+      await box.put('username', cred.user?.displayName ?? '');
+      await box.put('photoURL', cred.user?.photoURL ?? '');
+
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Account created successfully!")),
-      );
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const HomeScreen()),
       );
-    } on FirebaseAuthException catch (e) {
+    } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message ?? "Registration failed")),
+        SnackBar(content: Text(e.toString())),
       );
     } finally {
       setState(() => isLoading = false);
+    }
+  }
+
+  /// ✨ Google Sign-Up (local only)
+  Future<void> signUpWithGoogle() async {
+    setState(() => isLoading = true);
+
+    try {
+      final googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) {
+        setState(() => isLoading = false);
+        return; // User canceled
+      }
+
+      final box = Hive.box('userData');
+      await box.put('email', googleUser.email);
+      await box.put('username', googleUser.displayName ?? '');
+      await box.put('photoURL', googleUser.photoUrl ?? '');
+
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
+      );
+    } catch (e) {
+      setState(() => isLoading = false);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Google sign-up failed: $e")),
+      );
     }
   }
 
@@ -69,12 +103,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 const SizedBox(height: 32),
                 TextFormField(
                   controller: emailController,
-                  validator: (val) =>
-                      val!.isEmpty || !val.contains('@') ? 'Enter a valid email' : null,
+                  validator: (val) => val!.isEmpty || !val.contains('@')
+                      ? 'Enter a valid email'
+                      : null,
                   decoration: InputDecoration(
                     hintText: 'Email',
                     prefixIcon: const Icon(Icons.email),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
                     filled: true,
                     fillColor: Colors.white,
                   ),
@@ -83,12 +119,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 TextFormField(
                   controller: passwordController,
                   obscureText: true,
-                  validator: (val) =>
-                      val!.length < 6 ? 'Password must be at least 6 characters' : null,
+                  validator: (val) => val!.length < 6
+                      ? 'Password must be at least 6 characters'
+                      : null,
                   decoration: InputDecoration(
                     hintText: 'Password',
                     prefixIcon: const Icon(Icons.lock),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
                     filled: true,
                     fillColor: Colors.white,
                   ),
@@ -98,8 +136,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   onPressed: isLoading ? null : signUp,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.brown,
-                    padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 40, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16)),
                   ),
                   child: isLoading
                       ? const CircularProgressIndicator(color: Colors.white)
@@ -108,6 +148,25 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           style: TextStyle(color: Colors.white),
                         ),
                 ),
+                const SizedBox(height: 16),
+
+                /// Google Sign Up button
+                ElevatedButton.icon(
+                  onPressed: isLoading ? null : signUpWithGoogle,
+                  icon: const Icon(Icons.login, color: Colors.white),
+                  label: const Text(
+                    "Sign Up with Google",
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.redAccent,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 32, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16)),
+                  ),
+                ),
+
                 const SizedBox(height: 16),
                 TextButton(
                   onPressed: () => Navigator.pop(context),
