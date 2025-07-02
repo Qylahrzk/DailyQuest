@@ -2,6 +2,7 @@ name: dailyquest
 description: "A new Flutter project."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
+
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
 # The following defines the version and build number for your application.
@@ -16,6 +17,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
+
 version: 1.0.0+1
 
 environment:
@@ -30,15 +32,27 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  # Google login
-  google_sign_in: ^6.1.5
 
-  # Local user session storage
+  # ✅ Google login (manual sign-in)
+  google_sign_in: ^6.1.0
+
+  # ✅ Local user session storage (e.g. token, remember login flags)
   shared_preferences: ^2.2.0
 
-  # Offline NoSQL storage for mood/diary/XP
-  hive: ^2.2.3
-  hive_flutter: ^1.1.0
+  # ✅ SQLite for local storage of diary, moods, users, etc.
+  sqflite: ^2.3.3
+  path: ^1.9.0
+
+  # location preferences
+  geolocator: ^14.0.1
+  geocoding: ^4.0.0
+
+  # image scanning
+  google_mlkit_text_recognition: ^0.15.0
+  image_picker: ^1.0.0
+
+  # streak
+  confetti: ^0.7.0
 
 
   # The following adds the Cupertino Icons font to your application.
@@ -46,14 +60,17 @@ dependencies:
   cupertino_icons: ^1.0.8
   firebase_core: ^3.14.0
   firebase_auth: ^5.6.0
+  intl: ^0.20.2
+  pdf: ^3.11.3
+  printing: ^5.14.2
+  lottie: ^3.1.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
 
-  # Needed for Hive type adapters if you want to store objects (like DiaryEntry, Mood)
-  hive_generator: ^2.0.1
-  build_runner: ^2.4.6
+
+
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -79,6 +96,8 @@ flutter:
   #   - images/a_dot_ham.jpeg
   assets:
     - assets/images/moodchipi.png
+    - assets/images/chipmunk.png
+    - assets/animations/ChipJump.json
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
