@@ -1,58 +1,87 @@
 import 'package:flutter/material.dart';
 import '../auth/login_screen.dart';
 
+/// ✅ GetStartedScreen - shown when the user first opens the app.
+///
+/// - Displays logo + welcome text
+/// - Navigates to login screen
 class GetStartedScreen extends StatelessWidget {
   const GetStartedScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.brown.shade50,
+      backgroundColor: const Color(0xFFFFF8F3),
       body: SafeArea(
         child: Center(
-          child: Padding(
+          child: SingleChildScrollView(
             padding: const EdgeInsets.all(24.0),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Image.asset('assets/images/moodchipi.png'),
-                const SizedBox(height: 30),
-                const Text(
+                /// ✅ App logo
+                SizedBox(
+                  height: 200,
+                  child: Image.asset(
+                    'assets/images/moodchipi.png',
+                    fit: BoxFit.contain,
+                  ),
+                ),
+                const SizedBox(height: 40),
+
+                /// ✅ Heading
+                Text(
                   "Welcome to DailyQuest!",
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
-                    color: Colors.brown,
+                    color: Colors.brown.shade800,
                   ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 16),
-                const Text(
-                  "Track your mood, reflect with diary entries, and grow with XP! 🎯",
+
+                /// ✅ Description
+                Text(
+                  "Track your moods, journal your thoughts, and level up with XP on your personal growth adventure. 🎯",
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 16),
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.brown.shade700,
+                    height: 1.4,
+                  ),
                 ),
                 const SizedBox(height: 50),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (_) => const LoginScreen()),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.brown,
-                    foregroundColor: Colors.white, // ✅ Ensures white text
-                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+
+                /// ✅ Get Started button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const LoginScreen(),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.arrow_forward),
+                    label: const Text(
+                      "Get Started",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                  child: const Text(
-                    "Get Started",
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold, // Optional
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.brown.shade700,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 16,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   ),
                 ),

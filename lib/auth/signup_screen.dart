@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sqflite/sqflite.dart';
+import 'package:path/path.dart';
+
 import '../home/home_screen.dart';
-import '../auth_service.dart';
-import 'package:hive_flutter/hive_flutter.dart';
+import 'auth_service.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -12,17 +13,44 @@ class SignUpScreen extends StatefulWidget {
 }
 
 class _SignUpScreenState extends State<SignUpScreen> {
+  final _formKey = GlobalKey<FormState>();
+
+  final fullNameController = TextEditingController();
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
-  final _formKey = GlobalKey<FormState>();
+  final confirmPasswordController = TextEditingController();
+
   bool isLoading = false;
+  bool showPassword = false;
+  bool showConfirmPassword = false;
 
   final auth = AuthService();
-  final GoogleSignIn _googleSignIn = GoogleSignIn(scopes: ['email']);
 
-  /// ✨ Email/password signup via Firebase
+  Database? _db;
+
+  @override
+  void initState() {
+    super.initState();
+    _initDatabase();
+  }
+
+  /// ✅ Initialize SQLite database connection
+  Future<void> _initDatabase() async {
+    final dbPath = await getDatabasesPath();
+    final path = join(dbPath, 'dailyquest.db');
+    _db = await openDatabase(path);
+  }
+
+  /// ✅ Register new user with Firebase Auth (email & password)
   void signUp() async {
     if (!_formKey.currentState!.validate()) return;
+
+    if (passwordController.text.trim() != confirmPasswordController.text.trim()) {
+      ScaffoldMessenger.of(context as BuildContext).showSnackBar(
+        const SnackBar(content: Text("Passwords do not match.")),
+      );
+      return;
+    }
 
     setState(() => isLoading = true);
 
@@ -32,54 +60,46 @@ class _SignUpScreenState extends State<SignUpScreen> {
         password: passwordController.text.trim(),
       );
 
-      final box = Hive.box('userData');
-      await box.put('email', cred.user?.email ?? '');
-      await box.put('username', cred.user?.displayName ?? '');
-      await box.put('photoURL', cred.user?.photoURL ?? '');
+      await _saveUserToSQLite(
+        email: cred.user?.email ?? '',
+        displayName: fullNameController.text.trim(),
+        photoUrl: '',
+        provider: 'firebase',
+      );
 
       if (!mounted) return;
       Navigator.pushReplacement(
-        context,
+        context as BuildContext,
         MaterialPageRoute(builder: (_) => const HomeScreen()),
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
+      ScaffoldMessenger.of(context as BuildContext).showSnackBar(
+        SnackBar(content: Text("Sign-up failed: $e")),
       );
     } finally {
       setState(() => isLoading = false);
     }
   }
 
-  /// ✨ Google Sign-Up (local only)
-  Future<void> signUpWithGoogle() async {
-    setState(() => isLoading = true);
+  /// ✅ Save user data into SQLite
+  Future<void> _saveUserToSQLite({
+    required String email,
+    required String displayName,
+    required String photoUrl,
+    required String provider,
+  }) async {
+    if (_db == null) return;
 
-    try {
-      final googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) {
-        setState(() => isLoading = false);
-        return; // User canceled
-      }
+    await _db!.delete('userData');
 
-      final box = Hive.box('userData');
-      await box.put('email', googleUser.email);
-      await box.put('username', googleUser.displayName ?? '');
-      await box.put('photoURL', googleUser.photoUrl ?? '');
-
-      if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
-      );
-    } catch (e) {
-      setState(() => isLoading = false);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Google sign-up failed: $e")),
-      );
-    }
+    await _db!.insert('userData', {
+      'uid': null,
+      'email': email,
+      'displayName': displayName,
+      'photoUrl': photoUrl,
+      'provider': provider,
+    });
   }
 
   @override
@@ -101,37 +121,109 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 32),
+
+                /// ✅ Full Name
                 TextFormField(
-                  controller: emailController,
-                  validator: (val) => val!.isEmpty || !val.contains('@')
-                      ? 'Enter a valid email'
+                  controller: fullNameController,
+                  validator: (val) => val!.trim().isEmpty
+                      ? 'Enter your full name or username'
                       : null,
                   decoration: InputDecoration(
-                    hintText: 'Email',
-                    prefixIcon: const Icon(Icons.email),
+                    hintText: 'Full Name or Username',
+                    prefixIcon: const Icon(Icons.person),
                     border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     filled: true,
                     fillColor: Colors.white,
                   ),
                 ),
                 const SizedBox(height: 16),
+
+                /// ✅ Email
+                TextFormField(
+                  controller: emailController,
+                  validator: (val) => val!.isEmpty || !val.contains('@')
+                      ? 'Enter a valid email'
+                      : null,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: InputDecoration(
+                    hintText: 'Email',
+                    prefixIcon: const Icon(Icons.email),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                /// ✅ Password
                 TextFormField(
                   controller: passwordController,
-                  obscureText: true,
+                  obscureText: !showPassword,
                   validator: (val) => val!.length < 6
                       ? 'Password must be at least 6 characters'
                       : null,
                   decoration: InputDecoration(
                     hintText: 'Password',
                     prefixIcon: const Icon(Icons.lock),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        showPassword
+                            ? Icons.visibility
+                            : Icons.visibility_off,
+                        color: Colors.brown,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          showPassword = !showPassword;
+                        });
+                      },
+                    ),
                     border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                /// ✅ Confirm Password
+                TextFormField(
+                  controller: confirmPasswordController,
+                  obscureText: !showConfirmPassword,
+                  validator: (val) => val!.length < 6
+                      ? 'Please confirm your password'
+                      : null,
+                  decoration: InputDecoration(
+                    hintText: 'Confirm Password',
+                    prefixIcon: const Icon(Icons.lock_outline),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        showConfirmPassword
+                            ? Icons.visibility
+                            : Icons.visibility_off,
+                        color: Colors.brown,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          showConfirmPassword = !showConfirmPassword;
+                        });
+                      },
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     filled: true,
                     fillColor: Colors.white,
                   ),
                 ),
                 const SizedBox(height: 24),
+
+                /// ✅ Sign Up Button
                 ElevatedButton(
                   onPressed: isLoading ? null : signUp,
                   style: ElevatedButton.styleFrom(
@@ -139,7 +231,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 40, vertical: 12),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16)),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                   ),
                   child: isLoading
                       ? const CircularProgressIndicator(color: Colors.white)
@@ -150,24 +243,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                /// Google Sign Up button
-                ElevatedButton.icon(
-                  onPressed: isLoading ? null : signUpWithGoogle,
-                  icon: const Icon(Icons.login, color: Colors.white),
-                  label: const Text(
-                    "Sign Up with Google",
-                    style: TextStyle(color: Colors.white),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.redAccent,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 32, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16)),
-                  ),
-                ),
-
-                const SizedBox(height: 16),
                 TextButton(
                   onPressed: () => Navigator.pop(context),
                   child: const Text(
