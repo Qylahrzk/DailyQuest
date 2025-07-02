@@ -1,25 +1,56 @@
-import 'package:hive/hive.dart';
+import 'package:intl/intl.dart';
 
-part 'mood_entry.g.dart'; // required for Hive type adapter generation
-
-@HiveType(typeId: 0)
-class MoodEntry extends HiveObject {
-  @HiveField(0)
-  String mood; // e.g. "Happy", "Sad", "Excited"
-
-  @HiveField(1)
-  String note; // user's diary or journal note
-
-  @HiveField(2)
-  DateTime timestamp; // when the entry was created or updated
+class MoodEntry {
+  int? id;
+  String mood;
+  String note;
+  DateTime timestamp;
 
   MoodEntry({
+    this.id,
     required this.mood,
     required this.note,
     required this.timestamp,
   });
 
-  /// ✅ Common mood suggestions you might show to users
+  Map<String, dynamic> toMap() {
+    return {
+      if (id != null) 'id': id,
+      'mood': mood,
+      'note': note,
+      'timestamp': timestamp.toIso8601String(),
+    };
+  }
+
+  factory MoodEntry.fromMap(Map<String, dynamic> map) {
+    return MoodEntry(
+      id: map['id'] as int?,
+      mood: map['mood'] as String? ?? '',
+      note: map['note'] as String? ?? '',
+      timestamp: DateTime.parse(
+        map['timestamp'] as String? ?? DateTime.now().toIso8601String(),
+      ),
+    );
+  }
+
+  String get formattedDate {
+    return DateFormat.yMMMEd().add_jm().format(timestamp);
+  }
+
+  MoodEntry copyWith({
+    int? id,
+    String? mood,
+    String? note,
+    DateTime? timestamp,
+  }) {
+    return MoodEntry(
+      id: id ?? this.id,
+      mood: mood ?? this.mood,
+      note: note ?? this.note,
+      timestamp: timestamp ?? this.timestamp,
+    );
+  }
+
   static const List<String> commonMoods = [
     'Happy',
     'Sad',
