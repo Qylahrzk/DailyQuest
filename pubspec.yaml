@@ -98,6 +98,7 @@ flutter:
     - assets/images/moodchipi.png
     - assets/images/chipmunk.png
     - assets/animations/ChipJump.json
+    - assets/animations/ChipiJump.json
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
