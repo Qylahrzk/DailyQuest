@@ -1,3 +1,5 @@
+// lib/data/app_database.dart
+
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
@@ -103,15 +105,17 @@ class AppDatabase {
           )
         ''');
 
-        /// ✅ Create todos table (to-do tasks)
+        /// ✅ Create todos table (to-do tasks) - matching your model
         await db.execute('''
           CREATE TABLE todos (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT NOT NULL,
+            title TEXT,
             description TEXT,
-            priority TEXT NOT NULL,
-            isDone INTEGER NOT NULL DEFAULT 0,
-            dueDate TEXT
+            priority TEXT,
+            status TEXT,
+            date TEXT,
+            time TEXT,
+            createdAt TEXT
           )
         ''');
       },
@@ -123,7 +127,7 @@ class AppDatabase {
           /// - notebooks
           /// - notes
           /// - profile
-          /// - todos
+          /// - todos (updated schema)
 
           await db.execute('''
             CREATE TABLE IF NOT EXISTS notebooks (
@@ -156,11 +160,13 @@ class AppDatabase {
           await db.execute('''
             CREATE TABLE IF NOT EXISTS todos (
               id INTEGER PRIMARY KEY AUTOINCREMENT,
-              title TEXT NOT NULL,
+              title TEXT,
               description TEXT,
-              priority TEXT NOT NULL,
-              isDone INTEGER NOT NULL DEFAULT 0,
-              dueDate TEXT
+              priority TEXT,
+              status TEXT,
+              date TEXT,
+              time TEXT,
+              createdAt TEXT
             )
           ''');
         }

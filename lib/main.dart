@@ -1,87 +1,68 @@
-import 'package:dailyquest/navigation/splash_screen.dart';
+// lib/main.dart
+
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:path/path.dart';
 
 import 'firebase_options.dart';
+import 'data/app_database.dart';
+import 'navigation/splash_screen.dart';
 import 'auth/auth_layout.dart';
 
-void main() async {
+/// ✅ Entry point of the DailyQuest app.
+Future<void> main() async {
+  // Ensures Flutter engine and platform bindings are ready.
   WidgetsFlutterBinding.ensureInitialized();
 
   try {
+    // ⚠️ ONLY NEEDED ONCE:
+    // Uncomment the next line if you change your DB schema:
+    //
+    // await deleteOldDatabase();
+
+    /// ✅ Initialize Firebase
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
 
-    await _resetLocalDatabase();
+    /// ✅ Initialize SQLite database
+    ///
+    /// This ensures that:
+    /// - moods
+    /// - notes
+    /// - notebooks
+    /// - todos
+    /// - profile
+    /// - users
+    /// tables are created
+    await AppDatabase.initDb();
+
+    debugPrint("✅ App successfully initialized.");
   } catch (e) {
-    debugPrint('Initialization error: $e');
+    debugPrint("⚠️ Initialization error: $e");
   }
 
   runApp(const DailyQuestApp());
 }
 
-Future<void> _resetLocalDatabase() async {
+/// ✅ Deletes the existing SQLite DB to force migration.
+///
+/// - ONLY run this once if you change your database schema.
+/// - Otherwise you will lose all data!
+Future<void> deleteOldDatabase() async {
   final dbPath = await getDatabasesPath();
   final path = join(dbPath, 'dailyquest.db');
-
-  // ✅ IMPORTANT:
-  // Delete old DB ONCE to apply new schema
-  //await deleteDatabase(path);
-
-  await openDatabase(
-    path,
-    version: 2,
-    onCreate: (db, version) async {
-      await db.execute('''
-        CREATE TABLE moods (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          mood TEXT NOT NULL,
-          emoji TEXT,
-          note TEXT NOT NULL,
-          timestamp TEXT NOT NULL,
-          wordCount INTEGER DEFAULT 0
-        )
-      ''');
-
-      await db.execute('''
-        CREATE TABLE userData (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          uid TEXT,
-          email TEXT,
-          displayName TEXT,
-          photoUrl TEXT,
-          provider TEXT
-        )
-      ''');
-
-      await db.execute('''
-        CREATE TABLE todos (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          title TEXT NOT NULL,
-          description TEXT,
-          dueDate TEXT,
-          priority INTEGER DEFAULT 1,
-          isCompleted INTEGER NOT NULL DEFAULT 0
-        )
-      ''');
-
-      await db.execute('''
-        CREATE TABLE notes (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          title TEXT,
-          content TEXT,
-          createdAt TEXT
-        )
-      ''');
-    },
-  );
-
-  debugPrint("✅ SQLite DB initialized and wiped clean.");
+  await deleteDatabase(path);
+  debugPrint("✅ Old database deleted to apply new schema.");
 }
 
+/// ✅ DailyQuestApp
+///
+/// Top-level widget:
+/// - Sets up global theme
+/// - Defines the app’s first screen
+/// - Routes to SplashScreen → Auth → Home
 class DailyQuestApp extends StatelessWidget {
   const DailyQuestApp({super.key});
 
@@ -104,6 +85,14 @@ class DailyQuestApp extends StatelessWidget {
           secondary: Colors.brown.shade300,
         ),
       ),
+
+      /// ✅ Start with AuthLayout:
+      ///
+      /// - Checks Firebase login state
+      /// - Routes:
+      ///     - SplashScreen while loading
+      ///     - Auth screens if not logged in
+      ///     - Home / Dashboard if logged in
       home: const AuthLayout(
         pageIfNotConnected: SplashScreen(),
       ),
