@@ -4,12 +4,12 @@ import '../models/mood_entry.dart';
 
 /// ✅ Data Access Object (DAO) for the `moods` table
 ///
-/// Provides static methods to insert, update, delete, and fetch mood entries
-/// from the SQLite database managed by [AppDatabase].
+/// Handles database operations such as insert, update, delete,
+/// and fetching mood entries from SQLite.
 class MoodDao {
   /// 🔹 Insert a new mood entry into the database
   ///
-  /// If the entry has a duplicate `id`, it will be replaced.
+  /// If a record with the same `id` exists, it will be replaced.
   static Future<int> insert(MoodEntry entry) async {
     final db = await AppDatabase.database;
     return await db.insert(
@@ -19,9 +19,9 @@ class MoodDao {
     );
   }
 
-  /// 🔹 Update an existing mood entry by its [id]
+  /// 🔹 Update an existing mood entry by ID
   ///
-  /// Returns the number of rows affected (should be 1 if successful).
+  /// Returns the number of rows affected (1 if successful).
   static Future<int> update(MoodEntry entry) async {
     final db = await AppDatabase.database;
     return await db.update(
@@ -32,9 +32,9 @@ class MoodDao {
     );
   }
 
-  /// 🔹 Delete a mood entry by [id]
+  /// 🔹 Delete a mood entry by ID
   ///
-  /// Returns the number of rows deleted (should be 1 if successful).
+  /// Returns number of rows deleted (1 if successful).
   static Future<int> delete(int id) async {
     final db = await AppDatabase.database;
     return await db.delete(
@@ -44,9 +44,9 @@ class MoodDao {
     );
   }
 
-  /// 🔹 Get all mood entries sorted by `timestamp` (latest first)
+  /// 🔹 Fetch all mood entries (sorted by most recent)
   ///
-  /// Returns a list of [MoodEntry] objects, or an empty list if none found.
+  /// Returns a list of MoodEntry or an empty list.
   static Future<List<MoodEntry>> getAll() async {
     final db = await AppDatabase.database;
     final List<Map<String, dynamic>> maps = await db.query(
@@ -54,17 +54,15 @@ class MoodDao {
       orderBy: 'timestamp DESC',
     );
 
-    if (maps.isEmpty) return [];
-
-    return maps.map((e) => MoodEntry.fromMap(e)).toList();
+    return maps.map((map) => MoodEntry.fromMap(map)).toList();
   }
 
-  /// 🔹 Get a specific mood entry by [id]
+  /// 🔹 Fetch a mood entry by ID
   ///
-  /// Returns a [MoodEntry] if found, otherwise returns `null`.
+  /// Returns a single MoodEntry or `null` if not found.
   static Future<MoodEntry?> getById(int id) async {
     final db = await AppDatabase.database;
-    final maps = await db.query(
+    final List<Map<String, dynamic>> maps = await db.query(
       'moods',
       where: 'id = ?',
       whereArgs: [id],

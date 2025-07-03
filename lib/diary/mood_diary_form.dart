@@ -1,282 +1,414 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:sqflite/sqflite.dart';
-import 'package:path/path.dart';
+import '../models/mood_entry.dart';
+import '../data/mood_dao.dart';
+import '../navigation/diary_completion_screen.dart';
 
-/// ✅ Model class for a mood diary entry
-class MoodEntry {
-  int? id;
-  String mood;
-  String note;
-  DateTime timestamp;
+class MoodDiaryForm extends StatefulWidget {
+  final MoodEntry? existingEntry;
 
-  MoodEntry({
-    this.id,
-    required this.mood,
-    required this.note,
-    required this.timestamp,
+  const MoodDiaryForm({
+    super.key,
+    this.existingEntry,
   });
 
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'mood': mood,
-      'note': note,
-      'timestamp': timestamp.toIso8601String(),
-    };
-  }
-
-  factory MoodEntry.fromMap(Map<String, dynamic> map) {
-    return MoodEntry(
-      id: map['id'],
-      mood: map['mood'],
-      note: map['note'],
-      timestamp: DateTime.parse(map['timestamp']),
-    );
-  }
-}
-
-/// 📄 MoodDiaryScreen
-///
-/// Allows users to:
-/// - Add new mood + diary notes
-/// - View all mood entries
-/// - Delete entries
-class MoodDiaryScreen extends StatefulWidget {
-  const MoodDiaryScreen({super.key});
-
   @override
-  State<MoodDiaryScreen> createState() => _MoodDiaryScreenState();
+  State<MoodDiaryForm> createState() => _MoodDiaryFormState();
 }
 
-class _MoodDiaryScreenState extends State<MoodDiaryScreen> {
-  Database? _db;
-
-  List<MoodEntry> _entries = [];
-
-  final TextEditingController moodController = TextEditingController();
+class _MoodDiaryFormState extends State<MoodDiaryForm> {
   final TextEditingController noteController = TextEditingController();
+  final TextEditingController otherGratefulController = TextEditingController();
+
+  String selectedMood = '';
+  String selectedEmoji = '';
+  String? gratefulPart;
+  String currentDateTime = '';
+
+  final List<Map<String, String>> moods = [
+    {'emoji': '😄', 'label': 'Happy'},
+    {'emoji': '😢', 'label': 'Sad'},
+    {'emoji': '😠', 'label': 'Angry'},
+    {'emoji': '😲', 'label': 'Surprised'},
+    {'emoji': '😌', 'label': 'Calm'},
+    {'emoji': '🤔', 'label': 'Thoughtful'},
+    {'emoji': '😇', 'label': 'Grateful'},
+    {'emoji': '😱', 'label': 'Scared'},
+    {'emoji': '🤯', 'label': 'Stressed'},
+    {'emoji': '😴', 'label': 'Tired'},
+    {'emoji': '😕', 'label': 'Confused'},
+    {'emoji': '🤩', 'label': 'Excited'},
+    {'emoji': '😍', 'label': 'Loving'},
+    {'emoji': '😎', 'label': 'Cool'},
+  ];
+
+  final List<Map<String, dynamic>> gratefulParts = [
+    {'label': 'Family', 'icon': Icons.family_restroom},
+    {'label': 'Health', 'icon': Icons.favorite},
+    {'label': 'Work', 'icon': Icons.work},
+    {'label': 'Faith', 'icon': Icons.self_improvement},
+    {'label': 'Other', 'icon': Icons.more_horiz},
+  ];
 
   @override
   void initState() {
     super.initState();
-    _openDatabase();
+
+    currentDateTime =
+        DateFormat('dd MMM yyyy • hh:mm a').format(DateTime.now());
+
+    if (widget.existingEntry != null) {
+      final entry = widget.existingEntry!;
+      selectedMood = entry.mood;
+      selectedEmoji = entry.emoji;
+      noteController.text = entry.note;
+    }
   }
 
-  Future<void> _openDatabase() async {
-    final dbPath = await getDatabasesPath();
-    final path = join(dbPath, 'dailyquest.db');
-
-    _db = await openDatabase(
-      path,
-      version: 1,
-      onCreate: (db, version) {
-        return db.execute('''
-          CREATE TABLE IF NOT EXISTS moods (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            mood TEXT NOT NULL,
-            note TEXT NOT NULL,
-            timestamp TEXT NOT NULL
-          )
-        ''');
-      },
-    );
-
-    _loadEntries();
-  }
-
-  Future<void> _loadEntries() async {
-    final maps = await _db!.query(
-      'moods',
-      orderBy: 'timestamp DESC',
-    );
-
-    setState(() {
-      _entries = maps.map((e) => MoodEntry.fromMap(e)).toList();
-    });
-  }
-
-  /// ➕ Add a new mood entry to the database
-  Future<void> addMoodEntry() async {
-    final mood = moodController.text.trim();
-    final note = noteController.text.trim();
-
-    if (mood.isEmpty || note.isEmpty) {
-      ScaffoldMessenger.of(context as BuildContext).showSnackBar(
-        const SnackBar(content: Text('Please fill in both fields.')),
+  Future<void> saveEntry({bool navigate = true}) async {
+    if (selectedMood.isEmpty ||
+        noteController.text.trim().isEmpty ||
+        gratefulPart == null ||
+        (gratefulPart == 'Other' && otherGratefulController.text.isEmpty)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please complete all fields.')),
       );
       return;
     }
 
-    final newEntry = MoodEntry(
-      mood: mood,
-      note: note,
-      timestamp: DateTime.now(),
-    );
+    final wordCount =
+        noteController.text.trim().split(RegExp(r'\s+')).length;
 
-    await _db!.insert(
-      'moods',
-      newEntry.toMap(),
-    );
+    if (widget.existingEntry != null) {
+      final updated = widget.existingEntry!.copyWith(
+        mood: selectedMood,
+        emoji: selectedEmoji,
+        note: noteController.text.trim(),
+        timestamp: DateTime.now(),
+        wordCount: wordCount,
+      );
+      await MoodDao.update(updated);
+    } else {
+      final newEntry = MoodEntry(
+        mood: selectedMood,
+        emoji: selectedEmoji,
+        note: noteController.text.trim(),
+        timestamp: DateTime.now(),
+        wordCount: wordCount,
+      );
+      await MoodDao.insert(newEntry);
+    }
 
-    moodController.clear();
-    noteController.clear();
+    if (navigate) {
+      final allEntries = await MoodDao.getAll();
 
-    if (!mounted) return;
-    Navigator.pop(context as BuildContext);
+      if (!mounted) return;
 
-    ScaffoldMessenger.of(context as BuildContext).showSnackBar(
-      const SnackBar(content: Text('Entry added successfully!')),
-    );
-
-    _loadEntries();
-  }
-
-  Future<void> deleteMood(int id) async {
-    await _db!.delete(
-      'moods',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-    ScaffoldMessenger.of(context as BuildContext).showSnackBar(
-      const SnackBar(content: Text('Entry deleted')),
-    );
-    _loadEntries();
-  }
-
-  /// Show a dialog to add a new mood entry
-  void showAddMoodDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'How are you feeling today?',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Wanna share how you’re feeling now?',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey.shade600,
-              ),
-            ),
-          ],
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: moodController,
-                decoration: const InputDecoration(
-                  labelText: 'Mood',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: noteController,
-                maxLines: 4,
-                decoration: const InputDecoration(
-                  labelText: 'Diary Entry',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-            ],
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => DiaryCompletionScreen(
+            totalEntries: allEntries.length,
+            currentDay: allEntries.length,
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.brown,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: addMoodEntry,
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
-  }
+      );
 
-  @override
-  void dispose() {
-    _db?.close();
-    moodController.dispose();
-    noteController.dispose();
-    super.dispose();
+      if (!mounted) return;
+      Navigator.pop(context, true);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Draft saved.')),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Mood & Diary'),
-        centerTitle: true,
-      ),
-      body: _entries.isEmpty
-          ? const Center(
-              child: Text(
-                'No diary entries yet.',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey,
+      backgroundColor: const Color(0xFFFAD8A5),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                widget.existingEntry == null ? 'New Entry' : 'Edit Entry',
+                style: const TextStyle(
+                  color: Color(0xFF4A2B14),
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-            )
-          : ListView.builder(
-              itemCount: _entries.length,
-              itemBuilder: (context, index) {
-                final entry = _entries[index];
-
-                return Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  elevation: 2,
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: Colors.brown.shade200,
-                      child: Text(
-                        entry.mood.isNotEmpty
-                            ? entry.mood[0].toUpperCase()
-                            : '?',
-                        style: const TextStyle(color: Colors.white),
+              const SizedBox(height: 16),
+              Center(
+                child: Text(
+                  'How are you feeling today?',
+                  style: const TextStyle(
+                    color: Color(0xFFCF722C),
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFCF722C), Color(0xFFFAD8A5)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    const Text(
+                      'Select Mood Type',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                    title: Text(
-                      entry.mood,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    const SizedBox(height: 16),
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: moods.map((mood) {
+                        final isSelected = selectedMood == mood['label'];
+                        return GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              selectedMood = mood['label']!;
+                              selectedEmoji = mood['emoji']!;
+                            });
+                          },
+                          child: Container(
+                            width: 90,
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? Colors.white
+                                  : Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: isSelected
+                                    ? const Color(0xFFCF722C)
+                                    : Colors.white.withOpacity(0.5),
+                                width: 2,
+                              ),
+                            ),
+                            child: Column(
+                              children: [
+                                Text(
+                                  mood['emoji']!,
+                                  style: const TextStyle(fontSize: 28),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  mood['label']!,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: isSelected
+                                        ? const Color(0xFFCF722C)
+                                        : Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }).toList(),
                     ),
-                    subtitle: Text(
-                      '''
-${DateFormat.yMMMEd().add_jm().format(entry.timestamp)}
-${entry.note}
-''',
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  const Icon(Icons.calendar_today,
+                      color: Color(0xFF4A2B14), size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    currentDateTime,
+                    style: const TextStyle(
+                      color: Color(0xFF4A2B14),
+                      fontWeight: FontWeight.w600,
                     ),
-                    isThreeLine: true,
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.red),
-                      onPressed: () => deleteMood(entry.id!),
+                  )
+                ],
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'What part of your life are you grateful for?',
+                style: const TextStyle(
+                  color: Color(0xFF4A2B14),
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 12,
+                runSpacing: 12,
+                children: gratefulParts.map((part) {
+                  final isSelected = gratefulPart == part['label'];
+                  return ChoiceChip(
+                    label: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          part['icon'],
+                          size: 18,
+                          color: isSelected
+                              ? const Color(0xFFCF722C)
+                              : const Color(0xFF4A2B14),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          part['label'],
+                          style: TextStyle(
+                            color: isSelected
+                                ? const Color(0xFFCF722C)
+                                : const Color(0xFF4A2B14),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    selected: isSelected,
+                    onSelected: (_) {
+                      setState(() {
+                        gratefulPart = part['label'];
+                      });
+                    },
+                    selectedColor: Colors.white,
+                    backgroundColor:
+                        Colors.white.withAlpha((0.3 * 255).round()),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(
+                        color: isSelected
+                            ? const Color(0xFFCF722C)
+                            : Colors.white.withOpacity(0.5),
+                        width: 2,
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+              if (gratefulPart == 'Other') ...[
+                const SizedBox(height: 16),
+                TextField(
+                  controller: otherGratefulController,
+                  decoration: InputDecoration(
+                    hintText: 'Please specify...',
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                );
-              },
-            ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.brown,
-        shape: const CircleBorder(),
-        onPressed: () => showAddMoodDialog(context),
-        child: const Icon(Icons.add, color: Colors.white),
+                )
+              ],
+              const SizedBox(height: 24),
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.brown.withOpacity(0.2),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: TextField(
+                  controller: noteController,
+                  maxLines: 8,
+                  decoration: const InputDecoration(
+                    hintText: 'Write your diary here...',
+                    border: InputBorder.none,
+                    contentPadding:
+                        EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 32),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => saveEntry(navigate: false),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFCF722C),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        'Save Draft',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: saveEntry,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFCF722C),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        'Submit',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFCF722C),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        'Cancel',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
