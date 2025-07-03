@@ -1,12 +1,23 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
-import 'package:lottie/lottie.dart';
 import 'package:intl/intl.dart';
+import 'package:lottie/lottie.dart';
+import 'package:zefyrka/zefyrka.dart';
+import 'package:quill_format/quill_format.dart';
 
 import '../data/notebook_dao.dart';
 import '../data/note_dao.dart';
 import 'note_entry_screen.dart';
 import 'scan_note_util.dart';
 
+/// ✅ NotesScreen
+/// Displays:
+/// - Chipmunk greeting
+/// - Search bar
+/// - Notebooks carousel
+/// - Buttons for writing/scanning notes
+/// - XP gamification
 class NotesScreen extends StatefulWidget {
   const NotesScreen({super.key});
 
@@ -16,17 +27,31 @@ class NotesScreen extends StatefulWidget {
 
 class _NotesScreenState extends State<NotesScreen> {
   List<Map<String, dynamic>> _notebooks = [];
+  List<Map<String, dynamic>> _filteredNotebooks = [];
+  final TextEditingController _searchController = TextEditingController();
+  int _xp = 0;
 
   @override
   void initState() {
     super.initState();
     _loadNotebooks();
+    _searchController.addListener(_filterNotebooks);
   }
 
   Future<void> _loadNotebooks() async {
     final data = await NotebookDao.getAll();
     setState(() {
       _notebooks = data;
+      _filteredNotebooks = data;
+    });
+  }
+
+  void _filterNotebooks() {
+    final query = _searchController.text.toLowerCase();
+    setState(() {
+      _filteredNotebooks = _notebooks
+          .where((nb) => nb['title'].toLowerCase().contains(query))
+          .toList();
     });
   }
 
@@ -51,14 +76,13 @@ class _NotesScreenState extends State<NotesScreen> {
               if (titleController.text.trim().isNotEmpty) {
                 await NotebookDao.insert(
                   titleController.text.trim(),
-                  // ignore: deprecated_member_use
-                  Colors.primaries[_notebooks.length % Colors.primaries.length].value,
+                  Colors.primaries[
+                      _notebooks.length % Colors.primaries.length
+                  ].value,
                 );
-                if (context.mounted) {
-                  // ignore: use_build_context_synchronously
-                  Navigator.pop(context);
-                  await _loadNotebooks();
-                }
+                if (!mounted) return;
+                Navigator.pop(context);
+                await _loadNotebooks();
               }
             },
             child: const Text("Create"),
@@ -74,9 +98,7 @@ class _NotesScreenState extends State<NotesScreen> {
       MaterialPageRoute(
         builder: (_) => NotebookDetailScreen(notebook: notebook),
       ),
-    ).then((_) {
-      _loadNotebooks();
-    });
+    ).then((_) => _loadNotebooks());
   }
 
   Future<void> _scanNote() async {
@@ -84,14 +106,20 @@ class _NotesScreenState extends State<NotesScreen> {
     if (!mounted) return;
 
     if (scannedText.isNotEmpty) {
+      _increaseXP(5);
+
+      // Wrap scanned text into Zefyrka Delta JSON
+      final doc = NotusDocument()..insert(0, scannedText);
+      final jsonString = jsonEncode(doc.toJson());
+
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (_) => NoteEntryScreen(
-            notebookId: -1, // using -1 as dummy id for scanned notes
+            notebookId: -1,
             notebookTitle: "Scanned Note",
             notebookColor: Colors.grey.shade300,
-            initialText: scannedText,
+            initialText: jsonString,
           ),
         ),
       );
@@ -99,16 +127,40 @@ class _NotesScreenState extends State<NotesScreen> {
   }
 
   void _writeNewNote() {
+    _increaseXP(2);
+
+    // Prepare a daily prompt as initial Zefyrka document
+    final doc = NotusDocument()..insert(0, _dailyPrompt());
+    final jsonString = jsonEncode(doc.toJson());
+
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => NoteEntryScreen(
-          notebookId: -1, // using -1 as dummy id for single notes
+          notebookId: -1,
           notebookTitle: "New Note",
-          notebookColor: Colors.grey.shade300, initialText: '',
+          notebookColor: Colors.grey.shade300,
+          initialText: jsonString,
         ),
       ),
     );
+  }
+
+  void _increaseXP(int amount) {
+    setState(() {
+      _xp += amount;
+    });
+  }
+
+  String _dailyPrompt() {
+    final prompts = [
+      "What made you smile today?",
+      "Describe your ideal day off.",
+      "Something you're grateful for today?",
+      "Write a letter to your future self.",
+      "What challenge did you overcome this week?"
+    ];
+    return prompts[DateTime.now().day % prompts.length];
   }
 
   @override
@@ -126,7 +178,7 @@ class _NotesScreenState extends State<NotesScreen> {
       ),
       body: Column(
         children: [
-          // Chipmunk greeting
+          // Chipmunk + XP
           SizedBox(
             height: 150,
             child: Row(
@@ -137,27 +189,51 @@ class _NotesScreenState extends State<NotesScreen> {
                   child: Lottie.asset('assets/animations/chipmunk.json'),
                 ),
                 const SizedBox(width: 12),
-                const Expanded(
-                  child: Text(
-                    "Hi adventurer! Ready to jot down your thoughts today?",
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "Hi adventurer! Ready to jot down your thoughts today?",
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        "⭐ XP: $_xp",
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                    ],
                   ),
-                )
+                ),
               ],
             ),
           ),
 
-          // Notebook carousel
+          // Search bar
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: TextField(
+              controller: _searchController,
+              decoration: const InputDecoration(
+                prefixIcon: Icon(Icons.search),
+                hintText: "Search notebooks...",
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Notebooks carousel
           SizedBox(
             height: 160,
-            child: _notebooks.isEmpty
+            child: _filteredNotebooks.isEmpty
                 ? const Center(child: Text("No notebooks yet. Tap + to add one!"))
                 : ListView.builder(
                     scrollDirection: Axis.horizontal,
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: _notebooks.length,
+                    itemCount: _filteredNotebooks.length,
                     itemBuilder: (_, index) {
-                      final nb = _notebooks[index];
+                      final nb = _filteredNotebooks[index];
                       return GestureDetector(
                         onTap: () => _openNotebook(nb),
                         child: Container(
@@ -185,7 +261,6 @@ class _NotesScreenState extends State<NotesScreen> {
 
           const Spacer(),
 
-          // Buttons
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Row(
@@ -210,6 +285,7 @@ class _NotesScreenState extends State<NotesScreen> {
   }
 }
 
+/// ✅ NotebookDetailScreen
 class NotebookDetailScreen extends StatefulWidget {
   final Map<String, dynamic> notebook;
 
@@ -236,13 +312,17 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen> {
   }
 
   void _addNote() {
+    // Create empty Zefyrka document in JSON
+    final emptyJson = jsonEncode(NotusDocument().toJson());
+
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => NoteEntryScreen(
           notebookId: widget.notebook['id'],
           notebookTitle: widget.notebook['title'],
-          notebookColor: Color(widget.notebook['color']), initialText: '',
+          notebookColor: Color(widget.notebook['color']),
+          initialText: emptyJson,
         ),
       ),
     ).then((_) => _loadNotes());
@@ -260,6 +340,16 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen> {
         ),
       ),
     ).then((_) => _loadNotes());
+  }
+
+  String _extractPlainText(String jsonContent) {
+    try {
+      final delta = Delta.fromJson(jsonDecode(jsonContent));
+      final doc = NotusDocument.fromDelta(delta);
+      return doc.toPlainText().trim();
+    } catch (_) {
+      return jsonContent;
+    }
   }
 
   @override
@@ -281,13 +371,13 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen> {
               itemCount: _notes.length,
               itemBuilder: (_, index) {
                 final note = _notes[index];
-                final dateStr = note['createdAt'] ?? note['timestamp'] ?? '';
+                final dateStr = note['createdAt'] ?? '';
                 final date = dateStr.isNotEmpty
                     ? DateTime.tryParse(dateStr)
                     : null;
                 return ListTile(
                   title: Text(
-                    note['content'].split('\n').first,
+                    _extractPlainText(note['content']).split('\n').first,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
