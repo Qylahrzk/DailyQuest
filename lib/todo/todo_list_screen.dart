@@ -6,6 +6,13 @@ import '../data/todo_dao.dart';
 import '../models/todo.dart';
 import 'todo_entry_dialog.dart';
 
+/// ✅ TodoListScreen
+///
+/// Shows a list of all todos, grouped by date.
+/// Allows the user to:
+/// - View details
+/// - Edit a todo
+/// - Delete a todo
 class TodoListScreen extends StatefulWidget {
   const TodoListScreen({super.key});
 
@@ -14,6 +21,7 @@ class TodoListScreen extends StatefulWidget {
 }
 
 class _TodoListScreenState extends State<TodoListScreen> {
+  /// The list of all loaded todos
   List<Todo> _todos = [];
 
   @override
@@ -22,6 +30,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
     _loadTodos();
   }
 
+  /// 🔹 Loads all todos from the database
   Future<void> _loadTodos() async {
     final all = await TodoDao.getAll();
     setState(() {
@@ -29,6 +38,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
     });
   }
 
+  /// 🔹 Shows a bottom sheet with actions for a todo
   void _showOptions(Todo todo) {
     showModalBottomSheet(
       context: context,
@@ -64,12 +74,24 @@ class _TodoListScreenState extends State<TodoListScreen> {
     );
   }
 
+  /// 🔹 Displays a simple dialog showing todo details
   void _viewTodo(Todo todo) {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
         title: Text(todo.title),
-        content: Text(todo.description),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("Description: ${todo.description}"),
+            const SizedBox(height: 8),
+            Text("Priority: ${todo.priority}"),
+            Text("Status: ${todo.status}"),
+            Text("Date: ${todo.date}"),
+            Text("Time: ${todo.time}"),
+          ],
+        ),
         actions: [
           TextButton(
             child: const Text("Close"),
@@ -80,6 +102,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
     );
   }
 
+  /// 🔹 Opens the edit dialog for the given todo
   void _editTodo(Todo todo) {
     showDialog(
       context: context,
@@ -93,6 +116,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
     );
   }
 
+  /// 🔹 Deletes the todo from the database
   void _deleteTodo(int id) async {
     await TodoDao.delete(id);
     _loadTodos();
@@ -100,6 +124,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    /// Group todos by date (e.g. 2025-07-04)
     final grouped = <String, List<Todo>>{};
 
     for (var todo in _todos) {
@@ -114,26 +139,35 @@ class _TodoListScreenState extends State<TodoListScreen> {
           ? const Center(child: Text("No tasks found."))
           : ListView(
               children: grouped.entries.map((entry) {
+                final date = DateTime.parse(entry.key);
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    /// Group header
                     Container(
                       color: Colors.grey.shade300,
                       width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                      padding:
+                          const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                       child: Text(
-                        DateFormat.yMMMMd().format(DateTime.parse(entry.key)),
+                        DateFormat.yMMMMd().format(date),
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ),
-                    ...entry.value.map((todo) => ListTile(
-                          title: Text(todo.title),
-                          subtitle: Text(todo.time),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.more_vert),
-                            onPressed: () => _showOptions(todo),
-                          ),
-                        )),
+
+                    /// List all todos under this date
+                    ...entry.value.map(
+                      (todo) => ListTile(
+                        title: Text(todo.title),
+                        subtitle: Text(
+                          "Time: ${todo.time} | Priority: ${todo.priority}",
+                        ),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.more_vert),
+                          onPressed: () => _showOptions(todo),
+                        ),
+                      ),
+                    )
                   ],
                 );
               }).toList(),
