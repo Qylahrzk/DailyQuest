@@ -51,8 +51,10 @@ class AppDatabase {
           CREATE TABLE moods (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             mood TEXT NOT NULL,
+            emoji TEXT,
             note TEXT NOT NULL,
-            timestamp TEXT NOT NULL
+            timestamp TEXT NOT NULL,
+            wordCount INTEGER DEFAULT 0
           )
         ''');
 

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:dailyquest/home/home_screen.dart';
-import 'package:dailyquest/diary/mood_diary_form.dart';
+import 'package:dailyquest/diary/mood_diary_screen.dart';
 import 'package:dailyquest/notes/notes_screen.dart';
 import 'package:dailyquest/todo/todo_screen.dart';
 import 'package:dailyquest/profile/profile_screen.dart';
