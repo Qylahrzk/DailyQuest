@@ -15,7 +15,7 @@ void main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
 
-    await _initLocalDatabase();
+    await _resetLocalDatabase();
   } catch (e) {
     debugPrint('Initialization error: $e');
   }
@@ -23,20 +23,26 @@ void main() async {
   runApp(const DailyQuestApp());
 }
 
-Future<void> _initLocalDatabase() async {
+Future<void> _resetLocalDatabase() async {
   final dbPath = await getDatabasesPath();
   final path = join(dbPath, 'dailyquest.db');
 
+  // ✅ IMPORTANT:
+  // Delete old DB ONCE to apply new schema
+  //await deleteDatabase(path);
+
   await openDatabase(
     path,
-    version: 1,
+    version: 2,
     onCreate: (db, version) async {
       await db.execute('''
         CREATE TABLE moods (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           mood TEXT NOT NULL,
+          emoji TEXT,
           note TEXT NOT NULL,
-          timestamp TEXT NOT NULL
+          timestamp TEXT NOT NULL,
+          wordCount INTEGER DEFAULT 0
         )
       ''');
 
@@ -73,7 +79,7 @@ Future<void> _initLocalDatabase() async {
     },
   );
 
-  debugPrint("✅ SQLite DB initialized.");
+  debugPrint("✅ SQLite DB initialized and wiped clean.");
 }
 
 class DailyQuestApp extends StatelessWidget {

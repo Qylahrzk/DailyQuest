@@ -7,7 +7,7 @@ import 'package:lottie/lottie.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
-import '../diary/diary_screen.dart';
+import '../diary/mood_diary_screen.dart';
 import '../todo/todo_screen.dart';
 import '../notes/notes_screen.dart';
 import '../settings/settings_screen.dart';
@@ -317,7 +317,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   onViewAll: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const DiaryScreen()),
+                      MaterialPageRoute(builder: (_) => const MoodDiaryScreen()),
                     );
                   },
                 ),
