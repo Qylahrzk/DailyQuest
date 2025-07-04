@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sqflite/sqflite.dart';
-import 'package:path/path.dart';
+import 'package:path/path.dart' as p;
 
 import '../home/home_screen.dart';
 import 'auth_service.dart';
@@ -34,19 +34,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
     _initDatabase();
   }
 
-  /// ✅ Initialize SQLite database connection
   Future<void> _initDatabase() async {
     final dbPath = await getDatabasesPath();
-    final path = join(dbPath, 'dailyquest.db');
+    final path = p.join(dbPath, 'dailyquest.db');
     _db = await openDatabase(path);
   }
 
-  /// ✅ Register new user with Firebase Auth (email & password)
   void signUp() async {
     if (!_formKey.currentState!.validate()) return;
 
     if (passwordController.text.trim() != confirmPasswordController.text.trim()) {
-      ScaffoldMessenger.of(context as BuildContext).showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Passwords do not match.")),
       );
       return;
@@ -69,12 +67,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
       if (!mounted) return;
       Navigator.pushReplacement(
-        context as BuildContext,
+        context,
         MaterialPageRoute(builder: (_) => const HomeScreen()),
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context as BuildContext).showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Sign-up failed: $e")),
       );
     } finally {
@@ -82,7 +80,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
     }
   }
 
-  /// ✅ Save user data into SQLite
   Future<void> _saveUserToSQLite({
     required String email,
     required String displayName,
@@ -114,7 +111,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
             child: Column(
               children: [
                 const SizedBox(height: 40),
-                Image.asset('assets/images/moodchipi.png', height: 150),
+                Image.asset('assets/images/chipmunk.png', height: 150),
                 const SizedBox(height: 16),
                 const Text(
                   'Let’s get started!',
@@ -122,7 +119,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 ),
                 const SizedBox(height: 32),
 
-                /// ✅ Full Name
                 TextFormField(
                   controller: fullNameController,
                   validator: (val) => val!.trim().isEmpty
@@ -140,7 +136,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                /// ✅ Email
                 TextFormField(
                   controller: emailController,
                   validator: (val) => val!.isEmpty || !val.contains('@')
@@ -159,7 +154,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                /// ✅ Password
                 TextFormField(
                   controller: passwordController,
                   obscureText: !showPassword,
@@ -191,7 +185,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                /// ✅ Confirm Password
                 TextFormField(
                   controller: confirmPasswordController,
                   obscureText: !showConfirmPassword,
@@ -223,7 +216,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                /// ✅ Sign Up Button
                 ElevatedButton(
                   onPressed: isLoading ? null : signUp,
                   style: ElevatedButton.styleFrom(

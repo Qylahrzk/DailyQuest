@@ -2,11 +2,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sqflite/sqflite.dart';
-import 'package:path/path.dart';
+import 'package:path/path.dart' as p;
 
 import 'signup_screen.dart';
-import '../home/home_screen.dart';
-import 'auth_service.dart';
+import '../auth/auth_service.dart';
+import '../auth/auth_layout.dart';
+import '../auth/get_started_screen.dart';
 
 /// ✅ LoginScreen handles both email/password and Google login
 class LoginScreen extends StatefulWidget {
@@ -39,7 +40,7 @@ class _LoginScreenState extends State<LoginScreen> {
   /// ✅ Initialize SQLite database connection
   Future<void> _initDatabase() async {
     final dbPath = await getDatabasesPath();
-    final path = join(dbPath, 'dailyquest.db');
+    final path = p.join(dbPath, 'dailyquest.db');
     _db = await openDatabase(path);
   }
 
@@ -57,13 +58,18 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (!mounted) return;
 
-      Navigator.pushReplacement(
-        context as BuildContext,
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
+      // ✅ Navigate back to AuthLayout
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (_) => const AuthLayout(
+            pageIfNotConnected: GetStartedScreen(),
+          ),
+        ),
+        (route) => false,
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context as BuildContext).showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.toString())),
       );
     } finally {
@@ -81,20 +87,24 @@ class _LoginScreenState extends State<LoginScreen> {
         await _saveGoogleUserToSQLite(account);
 
         if (!mounted) return;
-        Navigator.pushReplacement(
-          context as BuildContext,
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (_) => const AuthLayout(
+              pageIfNotConnected: GetStartedScreen(),
+            ),
+          ),
+          (route) => false,
         );
       } else {
         if (!mounted) return;
-        ScaffoldMessenger.of(context as BuildContext).showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Google sign-in was cancelled.")),
         );
       }
     } catch (e) {
       if (kDebugMode) print(e);
       if (!mounted) return;
-      ScaffoldMessenger.of(context as BuildContext).showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Google login failed: $e")),
       );
     }
@@ -127,7 +137,7 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               children: [
                 const SizedBox(height: 40),
-                Image.asset('assets/images/moodchipi.png', height: 150),
+                Image.asset('assets/images/chipmunk.png', height: 150),
                 const SizedBox(height: 16),
                 const Text(
                   'Welcome back!',

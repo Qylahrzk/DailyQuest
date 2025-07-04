@@ -23,7 +23,7 @@ class GetStartedScreen extends StatelessWidget {
                 SizedBox(
                   height: 200,
                   child: Image.asset(
-                    'assets/images/moodchipi.png',
+                    'assets/images/gameychipi.png',
                     fit: BoxFit.contain,
                   ),
                 ),
