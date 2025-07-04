@@ -1,33 +1,33 @@
+import 'package:dailyquest/notes/achievement_service.dart';
 // ignore: unused_import
 import 'package:sqflite/sqflite.dart';
 import 'app_database.dart';
 
-/// ✅ Data Access Object for Notes
+/// ✅ Data Access Object (DAO) for the `notes` table
 ///
-/// This DAO handles all database operations for the `notes` table:
-/// - fetching notes for a notebook
-/// - creating new notes
+/// Handles all database operations for notes:
+/// - fetching notes
+/// - creating notes
 /// - updating notes
 /// - deleting notes
 ///
 /// Notes are stored as JSON (Zefyr format) in the `content` column.
 class NoteDao {
-  /// 🔹 Get all notes belonging to a single notebook
+  /// 🔹 Fetch all notes belonging to a single notebook
   ///
   /// Returns a list of maps:
-  /// ```
+  /// ```dart
   /// [
   ///   {id: 1, notebookId: 2, content: "...", createdAt: "..."},
   ///   ...
   /// ]
   /// ```
-  ///
-  /// Results are ordered newest first.
+  /// Ordered newest first.
   static Future<List<Map<String, dynamic>>> getNotesByNotebook(
       int notebookId) async {
     final db = await AppDatabase.database;
 
-    return db.query(
+    return await db.query(
       'notes',
       where: 'notebookId = ?',
       whereArgs: [notebookId],
@@ -37,11 +37,14 @@ class NoteDao {
 
   /// 🔹 Insert a new note into the database
   ///
-  /// [notebookId] → the notebook this note belongs to
-  /// [content] → JSON string of the note's Zefyr document
-  /// [createdAt] → timestamp in ISO8601 format
+  /// - [notebookId]: ID of the notebook this note belongs to
+  /// - [content]: JSON string of the note's Zefyr document
+  /// - [createdAt]: ISO8601 timestamp
   ///
-  /// Returns the inserted row ID.
+  /// Returns:
+  /// - The inserted row ID.
+  ///
+  /// This also awards +15 XP to the user.
   static Future<int> insertNote(
     int notebookId,
     String content,
@@ -49,7 +52,7 @@ class NoteDao {
   ) async {
     final db = await AppDatabase.database;
 
-    return db.insert(
+    final id = await db.insert(
       'notes',
       {
         'notebookId': notebookId,
@@ -57,15 +60,21 @@ class NoteDao {
         'createdAt': createdAt,
       },
     );
+
+    // Award XP for writing a note
+    await AchievementService.addXp(15);
+
+    return id;
   }
 
   /// 🔹 Delete a single note by its ID
   ///
-  /// Returns the number of rows deleted (should be 1).
+  /// Returns:
+  /// - Number of rows deleted (should be 1).
   static Future<int> deleteNote(int noteId) async {
     final db = await AppDatabase.database;
 
-    return db.delete(
+    return await db.delete(
       'notes',
       where: 'id = ?',
       whereArgs: [noteId],
@@ -74,13 +83,14 @@ class NoteDao {
 
   /// 🔹 Update an existing note
   ///
-  /// Use this if you implement note editing.
+  /// Use this when implementing note editing.
   ///
-  /// - [noteId] → ID of the note to update
-  /// - [content] → new JSON string for the note
-  /// - [updatedAt] → timestamp in ISO8601 format
+  /// - [noteId]: ID of the note to update
+  /// - [content]: new JSON string for the note
+  /// - [updatedAt]: timestamp in ISO8601 format
   ///
-  /// Returns the number of rows updated (should be 1).
+  /// Returns:
+  /// - Number of rows updated (should be 1).
   static Future<int> updateNote(
     int noteId,
     String content,
@@ -88,7 +98,7 @@ class NoteDao {
   ) async {
     final db = await AppDatabase.database;
 
-    return db.update(
+    return await db.update(
       'notes',
       {
         'content': content,

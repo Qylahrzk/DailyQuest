@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:lottie/lottie.dart';
 import 'package:zefyrka/zefyrka.dart';
 import 'package:quill_format/quill_format.dart';
 
@@ -78,6 +77,7 @@ class _NotesScreenState extends State<NotesScreen> {
                   titleController.text.trim(),
                   Colors.primaries[
                       _notebooks.length % Colors.primaries.length
+                  // ignore: deprecated_member_use
                   ].value,
                 );
                 if (!mounted) return;
@@ -92,6 +92,7 @@ class _NotesScreenState extends State<NotesScreen> {
     );
   }
 
+// NAVIGATION PUSH TO NOTEBOOK DETAIL
   void _openNotebook(Map<String, dynamic> notebook) {
     Navigator.push(
       context,
@@ -167,18 +168,25 @@ class _NotesScreenState extends State<NotesScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Your Notes"),
-        centerTitle: true,
+        elevation: 0,
+        backgroundColor: const Color(0xffD38C4F),
+        title: const Text(
+          "YOUR NOTE",
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.add, color: Colors.white),
             onPressed: _createNewNotebook,
-            icon: const Icon(Icons.add),
           )
         ],
       ),
       body: Column(
         children: [
-          // Chipmunk + XP
+          // Chipmunk greeting and XP
           SizedBox(
             height: 150,
             child: Row(
@@ -186,7 +194,11 @@ class _NotesScreenState extends State<NotesScreen> {
                 const SizedBox(width: 16),
                 SizedBox(
                   width: 100,
-                  child: Lottie.asset('assets/animations/chipmunk.json'),
+                  height: 100,
+                  child: Image.asset(
+                    'assets/images/GeekChipi.png',
+                    fit: BoxFit.contain,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -196,7 +208,10 @@ class _NotesScreenState extends State<NotesScreen> {
                     children: [
                       const Text(
                         "Hi adventurer! Ready to jot down your thoughts today?",
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       Text(
@@ -261,6 +276,7 @@ class _NotesScreenState extends State<NotesScreen> {
 
           const Spacer(),
 
+          // Buttons for writing/scanning
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Row(
@@ -312,7 +328,6 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen> {
   }
 
   void _addNote() {
-    // Create empty Zefyrka document in JSON
     final emptyJson = jsonEncode(NotusDocument().toJson());
 
     Navigator.push(
@@ -356,8 +371,15 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.notebook['title']),
-        backgroundColor: Color(widget.notebook['color']),
+        elevation: 0,
+        backgroundColor: const Color(0xffD38C4F),
+        title: Text(
+          widget.notebook['title'],
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
