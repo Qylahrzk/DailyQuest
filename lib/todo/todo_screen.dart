@@ -119,7 +119,15 @@ class _TodoScreenState extends State<TodoScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Your To-Do"),
+        elevation: 0,
+        backgroundColor: const Color(0xffD38C4F),
+        title: const Text(
+          "TO-DO LIST",
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            ),
+          ),
       ),
       body: SingleChildScrollView(
         child: Column(
