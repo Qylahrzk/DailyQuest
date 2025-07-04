@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:confetti/confetti.dart';
+import 'package:lottie/lottie.dart';
 
 class DiaryCompletionScreen extends StatefulWidget {
   final int totalEntries;
@@ -62,11 +63,12 @@ class _DiaryCompletionScreenState extends State<DiaryCompletionScreen> {
                   ),
                   const SizedBox(height: 16),
                   
-                  // 🏆 Trophy image
-                  Image.asset(
-                    'assets/images/trophy.png',
+                  // 🏆 Trophy animation
+                  Lottie.asset(
+                    'assets/animations/trophy.json',
                     width: 120,
                     height: 120,
+                    repeat: false,
                   ),
                   const SizedBox(height: 24),
 

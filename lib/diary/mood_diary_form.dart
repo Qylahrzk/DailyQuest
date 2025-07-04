@@ -117,6 +117,7 @@ class _MoodDiaryFormState extends State<MoodDiaryForm> {
       if (!mounted) return;
       Navigator.pop(context, true);
     } else {
+      // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Draft saved.')),
       );
@@ -195,11 +196,13 @@ class _MoodDiaryFormState extends State<MoodDiaryForm> {
                             decoration: BoxDecoration(
                               color: isSelected
                                   ? Colors.white
+                                  // ignore: deprecated_member_use
                                   : Colors.white.withOpacity(0.2),
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
                                 color: isSelected
                                     ? const Color(0xFFCF722C)
+                                    // ignore: deprecated_member_use
                                     : Colors.white.withOpacity(0.5),
                                 width: 2,
                               ),
@@ -301,6 +304,7 @@ class _MoodDiaryFormState extends State<MoodDiaryForm> {
                       side: BorderSide(
                         color: isSelected
                             ? const Color(0xFFCF722C)
+                            // ignore: deprecated_member_use
                             : Colors.white.withOpacity(0.5),
                         width: 2,
                       ),
@@ -329,6 +333,7 @@ class _MoodDiaryFormState extends State<MoodDiaryForm> {
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
+                      // ignore: deprecated_member_use
                       color: Colors.brown.withOpacity(0.2),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
