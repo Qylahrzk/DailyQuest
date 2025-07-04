@@ -1,41 +1,24 @@
-// lib/main.dart
-
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+// ignore: unused_import
 import 'package:sqflite/sqflite.dart';
+// ignore: unused_import
 import 'package:path/path.dart';
 
 import 'firebase_options.dart';
 import 'data/app_database.dart';
-import 'navigation/splash_screen.dart';
-import 'auth/auth_layout.dart';
+import 'navigation/auth_gate.dart';
 
-/// ✅ Entry point of the DailyQuest app.
-Future<void> main() async {
-  // Ensures Flutter engine and platform bindings are ready.
+final themeNotifier = ValueNotifier<ThemeMode>(ThemeMode.light);
+
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   try {
-    // ⚠️ ONLY NEEDED ONCE:
-    // Uncomment the next line if you change your DB schema:
-    //
-    // await deleteOldDatabase();
-
-    /// ✅ Initialize Firebase
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
 
-    /// ✅ Initialize SQLite database
-    ///
-    /// This ensures that:
-    /// - moods
-    /// - notes
-    /// - notebooks
-    /// - todos
-    /// - profile
-    /// - users
-    /// tables are created
     await AppDatabase.initDb();
 
     debugPrint("✅ App successfully initialized.");
@@ -43,59 +26,79 @@ Future<void> main() async {
     debugPrint("⚠️ Initialization error: $e");
   }
 
-  runApp(const DailyQuestApp());
+  runApp(
+    const DailyQuestApp(),
+  );
 }
 
-/// ✅ Deletes the existing SQLite DB to force migration.
-///
-/// - ONLY run this once if you change your database schema.
-/// - Otherwise you will lose all data!
-Future<void> deleteOldDatabase() async {
-  final dbPath = await getDatabasesPath();
-  final path = join(dbPath, 'dailyquest.db');
-  await deleteDatabase(path);
-  debugPrint("✅ Old database deleted to apply new schema.");
-}
-
-/// ✅ DailyQuestApp
-///
-/// Top-level widget:
-/// - Sets up global theme
-/// - Defines the app’s first screen
-/// - Routes to SplashScreen → Auth → Home
 class DailyQuestApp extends StatelessWidget {
   const DailyQuestApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'DailyQuest',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        primarySwatch: Colors.brown,
-        scaffoldBackgroundColor: const Color(0xFFFFF8F3),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.brown,
-            foregroundColor: Colors.white,
-            textStyle: const TextStyle(fontSize: 16),
-          ),
-        ),
-        colorScheme: ColorScheme.fromSwatch(primarySwatch: Colors.brown).copyWith(
-          secondary: Colors.brown.shade300,
-        ),
-      ),
-
-      /// ✅ Start with AuthLayout:
-      ///
-      /// - Checks Firebase login state
-      /// - Routes:
-      ///     - SplashScreen while loading
-      ///     - Auth screens if not logged in
-      ///     - Home / Dashboard if logged in
-      home: const AuthLayout(
-        pageIfNotConnected: SplashScreen(),
-      ),
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: themeNotifier,
+      builder: (context, mode, _) {
+        return MaterialApp(
+          title: 'DailyQuest',
+          debugShowCheckedModeBanner: false,
+          theme: _buildLightTheme(),
+          darkTheme: _buildDarkTheme(),
+          themeMode: mode,
+          home: const AuthGate(),
+        );
+      },
     );
   }
+}
+
+ThemeData _buildLightTheme() {
+  return ThemeData(
+    primarySwatch: Colors.brown,
+    scaffoldBackgroundColor: const Color(0xFFFDF2E3),
+    cardColor: Colors.white,
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: const Color(0xFFA15822),
+        foregroundColor: Colors.white,
+        textStyle: const TextStyle(fontSize: 16),
+      ),
+    ),
+    colorScheme: ColorScheme.fromSwatch(
+      primarySwatch: Colors.brown,
+    ).copyWith(
+      secondary: Colors.brown.shade300,
+      surface: Colors.white,
+      onSurface: Colors.brown.shade900,
+      onPrimary: Colors.white,
+    ),
+  );
+}
+
+ThemeData _buildDarkTheme() {
+  return ThemeData(
+    brightness: Brightness.dark,
+    scaffoldBackgroundColor: const Color(0xFF121212),
+    cardColor: const Color.fromARGB(255, 43, 27, 18),
+    primaryColor: Colors.brown,
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: const Color(0xFFCF722C),
+        foregroundColor: Colors.white,
+        textStyle: const TextStyle(fontSize: 16),
+      ),
+    ),
+    colorScheme: const ColorScheme.dark(
+      primary: Color(0xFFCF722C),
+      secondary: Color(0xFFFAD8A5),
+      surface: Color(0xFF1E1E1E),
+      onSurface: Colors.white,
+      onPrimary: Colors.white,
+      onSecondary: Colors.white,
+    ),
+    textTheme: const TextTheme(
+      bodyMedium: TextStyle(color: Colors.white),
+      titleMedium: TextStyle(color: Colors.white),
+    ),
+  );
 }

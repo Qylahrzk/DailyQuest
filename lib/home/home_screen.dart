@@ -294,7 +294,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 _buildTopBar(context, notifications),
                 const SizedBox(height: 12),
                 _buildWelcomeCard(
-                  user?.displayName ?? "Adventurer",
+                  user?.displayName ?? "",
                   location,
                   quote,
                 ),
