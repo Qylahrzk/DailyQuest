@@ -54,16 +54,23 @@ dependencies:
   # streak
   confetti: ^0.7.0
 
+  # rich text editor
+  zefyrka: 1.6.0
+  quill_format: ^1.0.2
+  notus: 1.0.0-rc.2
+  # speech_to_text: ^6.6.2
+
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
   firebase_core: ^3.14.0
   firebase_auth: ^5.6.0
-  intl: ^0.20.2
+  intl: ^0.19.0
   pdf: ^3.11.3
   printing: ^5.14.2
   lottie: ^3.1.0
+  
 
 dev_dependencies:
   flutter_test:
@@ -97,8 +104,11 @@ flutter:
   assets:
     - assets/images/moodchipi.png
     - assets/images/chipmunk.png
+    - assets/images/GeekChipi.png
+    - assets/images/gameychipi.png
     - assets/animations/ChipJump.json
     - assets/animations/ChipiJump.json
+    - assets/animations/trophy.json
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
